@@ -42,6 +42,8 @@ from("direct:dbInsert").routeId("dbInserterRoute").tracing().transacted("require
 ****
 
 == Preparing
+We will use MySql DB to hold information about the Files under processing and also records processed (idempotentRepository). Camel is expecting a table named https://github.com/apache/camel/blob/master/components/camel-sql/src/main/java/org/apache/camel/processor/idempotent/jdbc/JdbcMessageIdRepository.java[CAMEL_MESSAGEPROCESSED] according to a specified structure. This table is created part of application initialization check link:src/main/resources/schema-mysql.sql[schema-mysql.sql] 
+Also MySql will have a table 
 
 ===  Create the project
 [source,shell]
@@ -67,3 +69,8 @@ then upload all the CSV files from current folder to the target POD. use the fol
 cd <location_of_csv_files>
 oc rsync . <pod_id>:/deployments/messages
 ----
+== Check data in mySql
+Last thing is to check the uploaded dat
+oc rsh <<mysql_pod>>
+
+mysql -u user -h mysql sampledb -p
