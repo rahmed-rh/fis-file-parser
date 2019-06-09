@@ -1,0 +1,39 @@
+metadata:
+  labels:
+    app: ivo-fis-file-parser
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: ivo-fis-file-parser
+    spec:
+      containers:
+        - 
+          resources:
+            requests:
+              cpu: 
+              memory: 1Gi
+            limits:
+              cpu: 
+              memory: 1Gi
+          env:
+          - name: JAVA_DIAGNOSTICS
+            value: true
+          - name: DB_MYSQL_USERNAME
+            valueFrom:
+             secretKeyRef:
+               name: mysql
+               key: database-user
+          - name: DB_MYSQL_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: mysql
+                key: database-password
+          - name: DB_MYSQL_DATABASENAME
+            valueFrom:
+              secretKeyRef:
+                name: mysql
+                key: database-name                 
+          - name: DB_MYSQL_JDBCURL
+            value: jdbc:mysql://mysql/$(DB_MYSQL_DATABASENAME)
