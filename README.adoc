@@ -1,34 +1,69 @@
-# IVO FIS File Consumer
+= IVO FIS File Consumer
 
 An example project showing how to do file idempotent consumption in Camel.
 
-## Preparing
+:toc:
 
-Install and run MySQL [https://dev.mysql.com/doc/refman/5.7/en/installing.html]
+.The idea of the sample
+****
+The sample is used to show how we can achieve the following objectives 
 
-_Note: For my tests, I chose to run the docker image [https://hub.docker.com/r/mysql/mysql-server/]. You can run it using the command `docker run --name mysql -e MYSQL_DATABASE=example -e MYSQL_ROOT_PASSWORD=Abcd1234 -e MYSQL_ROOT_HOST=172.17.0.1 -p 3306:3306 -d mysql/mysql-server:5.7`. You can then connect and run SQL statements using the command `docker exec -it mysql mysql -uroot -p`._
+. Parse Input files and using https://access.redhat.com/documentation/en-us/red_hat_fuse/7.3/html-single/apache_camel_development_guide/index#MsgEnd-Idempotent[Idempotent consumer]  to filter out files processed.
+For the full file component attributes please check https://access.redhat.com/documentation/en-us/red_hat_fuse/7.3/html-single/apache_camel_component_reference/index#file-component[File Component]
++
+[width="100%",options="header,footer"]
+|====================
+| idempotentKey (filter) |  To use a custom idempotent key. By default the absolute path of the file is used. You can use the File Language, for example to use the file name and file size, you can do: idempotentKey=$file:name-$file:size
+| idempotentRepository (filter) |  A pluggable repository org.apache.camel.spi.IdempotentRepository which by default use MemoryMessageIdRepository if none is specified and idempotent is true.
+|====================
 
-Build the project source code
+. Ensure that in case of clustering only one application pod is processing file 
++
+[width="100%",options="header,footer"]
+|====================
+| readLock (lock) |  Used by consumer, to only poll the files if it has exclusive read-lock on the file (i.e. the file is not in-progress or being written). Camel will wait until the file lock is granted. idempotent - (only for file component) idempotent is for using a idempotentRepository as the read-lock. This allows to use read locks that supports clustering if the idempotent repository implementation supports that. 
+|====================
++
+[source,java]
+----
+...
+fromF("file:%s?noop=true&moveFailed=.failed&readLock=idempotent&idempotentRepository=#fileMessageIdRepository&idempotentKey=${file:name}-${file:size}", properties.getFile().getMessagesDirectory()).routeId("fileConsumerRoute")
+...
+----
+. Ensure that no duplicate record is processed, in case the pod failed in the middle of the processing of a file. Again we will use idempotent consumer
++
+[source,java]
+----
+...
+from("direct:dbInsert").routeId("dbInserterRoute").tracing().transacted("requiredTransactionPolicy").split().body()
+.log("dbInsert ${header.BERBER_ZAAK_GEGEVENS_FILE_LOCATION}, Body = ${body}").idempotentConsumer(simple("${header.BERBER_ZAAK_GEGEVENS_FILE_LOCATION}_${body.id}"),applicationContext.getBean("dbMessageIdRepository", IdempotentRepository.class)).eager(true).log("Inserting into DB...")
+...
+----
+****
 
-```
-$ cd $PROJECT_ROOT
-$ mvn clean install
-```
+== Preparing
 
-## Running the example standalone
+===  Create the project
+[source,shell]
+----
+oc new-project amq7-s2i
+----
 
-```
-$ cd $PROJECT_ROOT
-$ mvn spring-boot:run
-```
+===  Add the pipeline buildconfig
+[source,shell]
+----
+oc create -f build-pipeline.yaml
+----
 
-## Testing the code
-
-There are a couple of test files in the `src/test/data` folder. You can drop them in the `target/messages` folder to kick off the route.
-
-```
-$ cd $PROJECT_ROOT
-$ cp src/test/data/message_01.txt target/messages/
-```
-
-If the file successfully processed, you will see the message in the DB only once. You can check it using the SQL command `select * from example.MESSAGES;`. You will also see a single copy in the `target/processed` folder.
+== Upload CSV files
+To upload the csv files for processing, get the current running Pods 
+[source,shell]
+----
+oc get po
+----
+then upload all the CSV files from current folder to the target POD. use the following command.
+[source,shell]
+----
+cd <location_of_csv_files>
+oc rsync . <pod_id>:/deployments/messages
+----
