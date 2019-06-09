@@ -67,7 +67,7 @@ pipeline {
 							// Run the maven build
 							timeout(15) {
 								sh "mvn fabric8:deploy -Dfabric8.namespace=${env.NAMESPACE}"
-								def appDC = openshift.selector('deploymentconfig', 'ivo-fis-file-parser')
+								def appDC = openshift.selector('deploymentconfig', 'fis-file-parser')
 								appDC.watch {
 									echo "Waiting for ${it.name()} to be ready"
 									return it.object().status.readyReplicas == 1
