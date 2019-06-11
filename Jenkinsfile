@@ -66,7 +66,7 @@ pipeline {
 							git branch: "master", url: "https://github.com/rahmed-rh/fis-file-parser"
 							// Run the maven build
 							timeout(15) {
-								sh "mvn fabric8:deploy -Dfabric8.namespace=${env.NAMESPACE}"
+								sh "mvn clean install -Popenshift -Dfabric8.namespace=${env.NAMESPACE}"
 								def appDC = openshift.selector('deploymentconfig', 'fis-file-parser')
 								appDC.watch {
 									echo "Waiting for ${it.name()} to be ready"
