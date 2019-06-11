@@ -42,12 +42,14 @@ public class CamelRouteConfiguration extends RouteBuilder {
 
 	@Override
 	public void configure() {
-		fromF("file:%s?noop=true&moveFailed=.failed&readLock=idempotent&idempotentRepository=#fileMessageIdRepository&idempotentKey=${file:name}-${file:size}", properties.getFile().getMessagesDirectory()).routeId("fileConsumerRoute").tracing()
-				.bean(ProcessorBean.class,"processFileName").unmarshal().bindy(BindyType.Csv, BerberZaakGegevens.class).log("Body is ${body}").multicast().parallelProcessing(true).to("direct:dbInsert")
-				/*.to("direct:fileWrite")*/.end();
+		fromF("file:%s?noop=true&moveFailed=.failed&readLock=idempotent&idempotentRepository=#fileMessageIdRepository&idempotentKey=${file:name}-${file:size}",
+				properties.getFile().getMessagesDirectory()).routeId("fileConsumerRoute").tracing()
+						.bean(ProcessorBean.class, "processFileName").unmarshal()
+						.bindy(BindyType.Csv, BerberZaakGegevens.class).log("Body is ${body}").multicast()
+						.parallelProcessing(true).to("direct:dbInsert")/* .to("direct:fileWrite") */.end();
 
-		from("direct:dbInsert").routeId("dbInserterRoute").tracing().transacted("requiredTransactionPolicy").split().body()
-				.log("dbInsert ${header.BERBER_ZAAK_GEGEVENS_FILE_LOCATION}, Body = ${body}")
+		from("direct:dbInsert").routeId("dbInserterRoute").tracing().transacted("requiredTransactionPolicy").split()
+				.body().log("dbInsert ${header.BERBER_ZAAK_GEGEVENS_FILE_LOCATION}, Body = ${body}")
 				// I'm using the idempotentKey as the the location_id
 				.idempotentConsumer(simple("${header.BERBER_ZAAK_GEGEVENS_FILE_LOCATION}_${body.id}"),
 						applicationContext.getBean("dbMessageIdRepository", IdempotentRepository.class))
@@ -56,14 +58,17 @@ public class CamelRouteConfiguration extends RouteBuilder {
 						properties.getSql().getMessagesTable())
 				.log("Successfully inserted into DB.").end();
 
-		/*from("direct:fileWrite").routeId("fileWriterRoute").tracing()
-				.log("fileWrite Body is ${body}")
-				.idempotentConsumer(simple("${body['id']}"),
-						applicationContext.getBean("fileMessageIdRepository", IdempotentRepository.class))
-				.eager(true).log("Writing file...").setHeader(Exchange.FILE_NAME, simple("${body['id']}.txt"))
-				.setBody(simple("${body['message']}"))
-				.toF("file:%s?fileExist=Fail", properties.getFile().getProcessedDirectory())
-				.log("Successfully wrote file.").end();*/
+		/*
+		 * from("direct:fileWrite").routeId("fileWriterRoute").tracing()
+		 * .log("fileWrite Body is ${body}")
+		 * .idempotentConsumer(simple("${body['id']}"),
+		 * applicationContext.getBean("fileMessageIdRepository",
+		 * IdempotentRepository.class))
+		 * .eager(true).log("Writing file...").setHeader(Exchange.FILE_NAME,
+		 * simple("${body['id']}.txt")) .setBody(simple("${body['message']}"))
+		 * .toF("file:%s?fileExist=Fail", properties.getFile().getProcessedDirectory())
+		 * .log("Successfully wrote file.").end();
+		 */
 	}
 
 	@Bean
@@ -81,8 +86,8 @@ public class CamelRouteConfiguration extends RouteBuilder {
 
 	@Bean
 	JdbcMessageIdRepository fileMessageIdRepository(DataSource dataSource) {
+		System.out.println("datasource == "+dataSource);
 		return new JdbcMessageIdRepository(dataSource, properties.getSql().getMessagesTable() + "_FILE");
 	}
-	
 
 }

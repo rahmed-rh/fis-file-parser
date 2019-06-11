@@ -1,25 +1,18 @@
-metadata:
-  labels:
-    app: fis-file-parser
 spec:
-  replicas: 1
   template:
-    metadata:
-      labels:
-        app: fis-file-parser
     spec:
       containers:
         - 
           resources:
             requests:
-              cpu: 
-              memory: 1Gi
+              cpu: "0.2"
+              memory: 256Mi
             limits:
-              cpu: 
-              memory: 1Gi
+              cpu: "1.0"
+              memory: 256Mi
           env:
-          - name: JAVA_DIAGNOSTICS
-            value: true
+          - name: SPRING_APPLICATION_JSON
+            value: '{"server":{"undertow":{"io-threads":1, "worker-threads":2 }}}'
           - name: DB_MYSQL_USERNAME
             valueFrom:
              secretKeyRef:
@@ -36,4 +29,4 @@ spec:
                 name: mysql
                 key: database-name                 
           - name: DB_MYSQL_JDBCURL
-            value: jdbc:mysql://mysql/$(DB_MYSQL_DATABASENAME)?autoReconnect=true&useSSL=false
+            value: jdbc:mysql://mysql/$(DB_MYSQL_DATABASENAME)
