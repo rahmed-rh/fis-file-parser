@@ -36,4 +36,4 @@ spec:
                 name: mysql
                 key: database-name                 
           - name: DB_MYSQL_JDBCURL
-            value: jdbc:mysql://mysql/$(DB_MYSQL_DATABASENAME)
+            value: jdbc:mysql://mysql/$(DB_MYSQL_DATABASENAME)?autoReconnect=true&useSSL=false
