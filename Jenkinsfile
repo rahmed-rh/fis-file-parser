@@ -28,6 +28,44 @@ pipeline {
 			}
 		}
 
+		stage('Update FIS Templates and Image Streams') {
+			steps {
+				script {
+					openshift.withCluster() {
+						//openshift.verbose() // set logging level for subsequent operations executed (loglevel=8)
+						openshift.withProject("${env.NAMESPACE}") {
+							def BASEURL="https://raw.githubusercontent.com/jboss-fuse/application-templates/application-templates-2.1.fuse-730065-redhat-00002"
+							echo "Creating/updating FIS ImageStream"
+   						openshift.replace("--force", "-f ", BASEURL+"/fis-image-streams.json")
+
+							openshift.replace("--force", "-f ", BASEURL+"/quickstarts/eap-camel-amq-template.json")
+							openshift.replace("--force", "-f ", BASEURL+"/quickstarts/eap-camel-cdi-template.json")
+							openshift.replace("--force", "-f ", BASEURL+"/quickstarts/eap-camel-cxf-jaxrs-template.json")
+							openshift.replace("--force", "-f ", BASEURL+"/quickstarts/eap-camel-cxf-jaxws-template.json")
+							openshift.replace("--force", "-f ", BASEURL+"/quickstarts/eap-camel-jpa-template.json")
+							openshift.replace("--force", "-f ", BASEURL+"/quickstarts/karaf-camel-amq-template.json")
+							openshift.replace("--force", "-f ", BASEURL+"/quickstarts/karaf-camel-log-template.json")
+							openshift.replace("--force", "-f ", BASEURL+"/quickstarts/karaf-camel-rest-sql-template.json")
+							openshift.replace("--force", "-f ", BASEURL+"/quickstarts/karaf-cxf-rest-template.json")
+							openshift.replace("--force", "-f ", BASEURL+"/quickstarts/spring-boot-camel-amq-template.json")
+							openshift.replace("--force", "-f ", BASEURL+"/quickstarts/spring-boot-camel-config-template.json")
+							openshift.replace("--force", "-f ", BASEURL+"/quickstarts/spring-boot-camel-drools-template.json")
+							openshift.replace("--force", "-f ", BASEURL+"/quickstarts/spring-boot-camel-infinispan-template.json")
+							openshift.replace("--force", "-f ", BASEURL+"/quickstarts/spring-boot-camel-rest-sql-template.json")
+							openshift.replace("--force", "-f ", BASEURL+"/quickstarts/spring-boot-camel-teiid-template.json")
+							openshift.replace("--force", "-f ", BASEURL+"/quickstarts/spring-boot-camel-template.json")
+							openshift.replace("--force", "-f ", BASEURL+"/quickstarts/spring-boot-camel-xa-template.json")
+							openshift.replace("--force", "-f ", BASEURL+"/quickstarts/spring-boot-camel-xml-template.json")
+							openshift.replace("--force", "-f ", BASEURL+"/quickstarts/spring-boot-cxf-jaxrs-template.json")
+							openshift.replace("--force", "-f ", BASEURL+"/quickstarts/spring-boot-cxf-jaxws-template.json")
+
+
+						}
+					}
+				}
+			}
+		}
+
 		stage('Create MySQL') {
 			steps {
 				script {
@@ -66,7 +104,7 @@ pipeline {
 							git branch: "master", url: "https://github.com/rahmed-rh/fis-file-parser"
 							// Run the maven build
 							timeout(15) {
-								sh "mvn clean install -Popenshift -Dfabric8.namespace=${env.NAMESPACE}"
+								sh "mvn fabric8:deploy -Popenshift -Dfabric8.namespace=${env.NAMESPACE}"
 								def appDC = openshift.selector('deploymentconfig', 'fis-file-parser')
 								appDC.watch {
 									echo "Waiting for ${it.name()} to be ready"
